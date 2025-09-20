@@ -4,8 +4,9 @@
   "dependencies": {
     "body-parser": "^1.15.2",
     "cookie-parser": "^1.4.3",
+    "dns": "^0.2.2",
     "dotenv": "^16.0.1",
-    "express": "^4.14.0",
+    "express": "^4.21.2",
     "fcc-express-bground": "github:freeCodeCamp/fcc-express-bground-pkg"
   },
   "main": "server.js",
