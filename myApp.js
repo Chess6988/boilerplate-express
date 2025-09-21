@@ -1,49 +1,83 @@
-// myApp.js
 const express = require('express');
-const dns = require('dns');
-const urlParser = require('url');
 const app = express();
+const bodyParser = require('body-parser');
+const { v4: uuidv4 } = require('uuid');
 
-// Middleware pour parser les données POST
-app.use(express.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
-// Tableau pour stocker les URLs
-const urls = [];
+// Stockage en mémoire
+let users = [];
 
-// Route POST pour raccourcir l'URL
-app.post('/api/shorturl', (req, res) => {
-  const originalUrl = req.body.url;
+// Créer un utilisateur
+app.post('/api/users', (req, res) => {
+  const username = req.body.username;
+  const newUser = { username, _id: uuidv4(), log: [] };
+  users.push(newUser);
+  res.json({ username: newUser.username, _id: newUser._id });
+});
 
-  // Vérifier le format de l'URL
-  if (!/^https?:\/\//i.test(originalUrl)) {
-    return res.json({ error: 'invalid url' });
+// Lister tous les utilisateurs
+app.get('/api/users', (req, res) => {
+  res.json(users.map(u => ({ username: u.username, _id: u._id })));
+});
+
+// Ajouter un exercice
+app.post('/api/users/:_id/exercises', (req, res) => {
+  const user = users.find(u => u._id === req.params._id);
+  if (!user) return res.json({ error: 'User not found' });
+
+  const description = req.body.description;
+  const duration = parseInt(req.body.duration);
+  const date = req.body.date ? new Date(req.body.date) : new Date();
+
+  if (date.toString() === 'Invalid Date') {
+    return res.json({ error: 'Invalid date' });
   }
 
-  // Extraire le nom de domaine
-  const hostname = urlParser.parse(originalUrl).hostname;
+  const exercise = {
+    description,
+    duration,
+    date: date.toDateString()
+  };
 
-  // Vérifier si le domaine existe
-  dns.lookup(hostname, (err) => {
-    if (err) return res.json({ error: 'invalid url' });
+  user.log.push(exercise);
 
-    // Ajouter l'URL au tableau et générer un identifiant unique
-    const shortUrl = urls.length + 1;
-    urls.push(originalUrl);
-
-    res.json({ original_url: originalUrl, short_url: shortUrl });
+  res.json({
+    username: user.username,
+    description: exercise.description,
+    duration: exercise.duration,
+    date: exercise.date,
+    _id: user._id
   });
 });
 
-// Route GET pour rediriger vers l'URL originale
-app.get('/api/shorturl/:short_url', (req, res) => {
-  const index = parseInt(req.params.short_url) - 1;
-  const originalUrl = urls[index];
+// Obtenir le log d’un utilisateur
+app.get('/api/users/:_id/logs', (req, res) => {
+  const user = users.find(u => u._id === req.params._id);
+  if (!user) return res.json({ error: 'User not found' });
 
-  if (!originalUrl) {
-    return res.json({ error: 'No URL found for this short_url' });
+  let { from, to, limit } = req.query;
+  let log = [...user.log];
+
+  if (from) {
+    const fromDate = new Date(from);
+    log = log.filter(e => new Date(e.date) >= fromDate);
+  }
+  if (to) {
+    const toDate = new Date(to);
+    log = log.filter(e => new Date(e.date) <= toDate);
+  }
+  if (limit) {
+    log = log.slice(0, parseInt(limit));
   }
 
-  res.redirect(originalUrl);
+  res.json({
+    username: user.username,
+    count: log.length,
+    _id: user._id,
+    log
+  });
 });
 
 module.exports = app;
