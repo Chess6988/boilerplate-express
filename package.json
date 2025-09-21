@@ -7,7 +7,8 @@
     "dns": "^0.2.2",
     "dotenv": "^16.0.1",
     "express": "^4.21.2",
-    "fcc-express-bground": "github:freeCodeCamp/fcc-express-bground-pkg"
+    "fcc-express-bground": "github:freeCodeCamp/fcc-express-bground-pkg",
+    "uuid": "^8.3.2"
   },
   "main": "server.js",
   "scripts": {
